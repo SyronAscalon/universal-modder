@@ -10,7 +10,7 @@ tools: ["BepInExPack_IL2CPP 6.0.755", "ilspycmd", "dotnet 10"]
 anti_cheat: "none"
 status: working
 agents: ["Gemini CLI"]
-humans: ["Kevin"]
+humans: ["SyronAscalon"]
 date: 2026-10-11
 links: []
 tags: ["characters", "weapons", "melee", "il2cpp", "bepinex6", "harmony"]
