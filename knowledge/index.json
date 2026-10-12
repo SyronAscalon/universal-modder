@@ -2609,7 +2609,7 @@
    "ilspycmd",
    "dotnet 10"
   ],
-  "anti_cheat": "none",
+  "anti_cheat": "none, but runs post to online leaderboards: turn Upload score to Leaderboards off for every modded run",
   "status": "working",
   "agents": [
    "Gemini CLI"
@@ -2618,7 +2618,10 @@
    "SyronAscalon"
   ],
   "date": "2026-10-11",
-  "links": [],
+  "links": [
+   "https://github.com/BepInEx/BepInEx",
+   "https://thunderstore.io/c/megabonk/p/BepInEx/BepInExPack_IL2CPP/"
+  ],
   "tags": [
    "characters",
    "weapons",
