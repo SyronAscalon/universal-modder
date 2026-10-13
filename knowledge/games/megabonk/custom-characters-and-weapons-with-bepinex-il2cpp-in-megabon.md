@@ -7,7 +7,7 @@ platform: windows
 engine: unity-il2cpp
 route: loader-api
 tools: ["BepInExPack_IL2CPP 6.0.755", "ilspycmd", "dotnet 10"]
-anti_cheat: "none"
+anti_cheat: "none, but runs post to online leaderboards: turn Upload score to Leaderboards off for every modded run"
 status: working
 agents: ["Gemini CLI"]
 humans: ["Kevin"]
@@ -26,6 +26,11 @@ tags: ["characters", "weapons", "melee", "il2cpp", "bepinex6", "harmony", "vfx",
 - **Mod Loader:** BepInExPack_IL2CPP 6.0.755 (Thunderstore)
 - **SDK:** .NET 6.0 (`net6.0`) with C# `latest` and `AllowUnsafeBlocks: true`
 - **OS:** Windows 10 / 11 x64
+- **Leaderboards:** Megabonk posts finished runs to online leaderboards. A custom character with an execute weapon
+  is a cheat there, so set **Upload score to Leaderboards** to Off in the game's settings before any modded run.
+  This plugin doesn't touch that setting. Other Megabonk mods (Megamod, for one) lock it off while they're loaded,
+  and a released version of this one should too.
+
 
 ## Route and why
 We chose the **loader-api** route using BepInEx 6 IL2CPP with Harmony detours. Megabonk runs on Unity 2023.2 IL2CPP. BepInEx generates interop assemblies (`BepInEx/interop/Assembly-CSharp.dll`, `UnityEngine.*.dll`) containing typed invoke stubs. Data-only modding is impossible because characters and weapons are ScriptableObject instances loaded into internal dictionaries. Native DLL injection with MinHook is unnecessarily complex given that BepInEx IL2CPP provides full C# access to all engine types and Harmony method patching.
@@ -43,7 +48,8 @@ We chose the **loader-api** route using BepInEx 6 IL2CPP with Harmony detours. M
 - **Exponential Scaling in Horde Combat:** With cleaving melee weapons (`canMultiHit = true`), uncapped per-execution stat stacking (e.g. +0.25% impale chance, +0.35 armor per kill) creates runaway snowball curves when fighting dense enemy packs. Balancing requires hard caps (e.g. 20% max proc chance) and fractional increments (+0.05% per execution).
 
 ## Build steps
-1. Install BepInExPack_IL2CPP 6.0.755 into the game folder and run once to generate interop assemblies.
+1. Install BepInExPack_IL2CPP 6.0.755 into the game folder and run once to generate interop assemblies. In the
+   game's settings, set **Upload score to Leaderboards** to Off.
 2. In `BepInEx/config/BepInEx.cfg`, set `EnableAssemblyCache = false` and delete `BepInEx/cache/chainloader_typeloader.dat`.
 3. Create a C# project targeting `net6.0` referencing `BepInEx.Core.dll`, `BepInEx.Unity.IL2CPP.dll`, `0Harmony.dll`, and interop assemblies (`UnityEngine.PhysicsModule.dll`, `UnityEngine.ParticleSystemModule.dll`).
 4. Implement registration in `DataManager.Load` Postfix, grid injection in `CharacterMenu.TryInit` Postfix, and weapon damage interception in `Enemy.DamageFromPlayerWeapon` Prefix.
@@ -58,8 +64,8 @@ We chose the **loader-api** route using BepInEx 6 IL2CPP with Harmony detours. M
   - Diagnostic tree logging: Confirmed `ParticleSystem` components and `Atlas03Glow` materials recolored from magenta to warm harvest gold.
 
 ## Gotchas
-1. **BepInEx assembly metadata cache hides new plugins.** BepInEx caches the initial 0-plugin state in `BepInEx/cache/chainloader_typeloader.dat` when `EnableAssemblyCache = true`. Fix: set `EnableAssemblyCache = false` in `BepInEx.cfg` and delete the cache file.
-2. **Preloader texture loading crashes with AccessViolation.** Calling `new Texture2D()` or `LoadImage` inside `BasePlugin.Load()` causes a fatal DirectX AccessViolation because the GPU device context is not yet active during BepInEx Chainloader startup. Fix: defer all texture loading to `DataManager.Load` Postfix.
+1. **The plugin DLL is in `plugins/` but never loads.** BepInEx caches what it found in each DLL in `BepInEx/cache/chainloader_typeloader.dat` (`EnableAssemblyCache`, on by default). Entries are keyed by path and a hash of the file's bytes (`TypeLoader.FindPluginTypes`), so a rebuilt DLL is scanned again, but a byte-identical DLL keeps whatever an earlier scan found, including no plugins. Fix: delete the cache file, or set `EnableAssemblyCache = false` while iterating.
+2. **Texture loading in `BasePlugin.Load()` crashes with AccessViolation.** Calling `new Texture2D()` or `LoadImage` inside `BasePlugin.Load()` causes a fatal DirectX AccessViolation because the GPU device context is not yet active during BepInEx Chainloader startup. Fix: defer all texture loading to `DataManager.Load` Postfix.
 3. **ImageConversion.LoadImage fails with ObjectCollectedException in IL2CPP.** Passing an implicit `Il2CppStructArray<byte>` to `ImageConversion.LoadImage` creates an unpinned managed wrapper collected by IL2CPP GC before native marshalling finishes. Fix: pre-convert images to raw RGBA32 byte files (`.raw`) and load them directly via `Texture2D.SetPixel(x, y, color)` and `Apply()`.
 4. **Custom weapons crash on attack with KeyNotFoundException.** Megabonk expects all standard stats (`Projectiles`, `ProjectileSpeedMultiplier`, etc.) in `weaponData.baseStats`. Omitting them crashes on the first attack swing. Fix: clone all key-value pairs from `baseWeapon.baseStats` and add a Harmony prefix fallback on `WeaponBase.GetBaseValue`.
 5. **Character selection card throws NullReferenceException on GetName.** Modded unlockables lack localization table entries, causing `UnlockableBase.GetName()` to dereference null. Fix: hook `UnlockableBase.GetName` and `GetDescription` with Harmony prefixes returning the modded name/description directly.
