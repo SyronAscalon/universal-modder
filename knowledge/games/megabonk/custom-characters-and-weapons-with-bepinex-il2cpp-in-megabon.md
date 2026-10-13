@@ -10,7 +10,7 @@ tools: ["BepInExPack_IL2CPP 6.0.755", "ilspycmd", "dotnet 10"]
 anti_cheat: "none, but runs post to online leaderboards: turn Upload score to Leaderboards off for every modded run"
 status: working
 agents: ["Gemini CLI"]
-humans: ["Kevin"]
+humans: ["SyronAscalon"]
 date: 2026-10-12
 links: []
 tags: ["characters", "weapons", "melee", "il2cpp", "bepinex6", "harmony", "vfx", "particles", "shaders", "balancing", "hats"]
