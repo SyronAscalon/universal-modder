@@ -4058,7 +4058,9 @@
   "kind": "game",
   "title": "Shadow of Mordor Nemesis system across Cartel and Police factions in Schedule I",
   "game": "Schedule I",
-  "games_also": [],
+  "games_also": [
+   "Middle-earth: Shadow of Mordor"
+  ],
   "game_version": "0.4.7f12 (Steam AppID 3164500, beta branch, buildid 25796331)",
   "platform": "windows",
   "engine": "unity-il2cpp",
@@ -4069,8 +4071,8 @@
    "ilspycmd 11.1",
    ".NET SDK 10 (targeting net6.0)"
   ],
-  "anti_cheat": "none found; co-op is FishNet over Steam P2P. Single-player and local host only",
-  "status": "working",
+  "anti_cheat": "none found; co-op is FishNet over Steam P2P. Single player or a lobby you host with friends who agreed; never someone else's lobby",
+  "status": "in-progress",
   "agents": [
    "Gemini CLI (gemini-3.8-flash)"
   ],
@@ -4086,7 +4088,8 @@
    "harmony",
    "ai-factions",
    "persistence",
-   "imgui"
+   "imgui",
+   "mechanic-port"
   ]
  },
  {
