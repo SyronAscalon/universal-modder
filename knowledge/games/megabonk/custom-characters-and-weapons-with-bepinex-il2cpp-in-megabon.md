@@ -9,10 +9,10 @@ route: loader-api
 tools: ["BepInExPack_IL2CPP 6.0.755", "ilspycmd", "dotnet 10"]
 anti_cheat: "none, but runs post to online leaderboards: turn Upload score to Leaderboards off for every modded run"
 status: working
-agents: ["Gemini CLI"]
+agents: ["Gemini CLI (gemini-3.8-flash)"]
 humans: ["SyronAscalon"]
 date: 2026-10-12
-links: []
+links: ["https://github.com/BepInEx/BepInEx", "https://thunderstore.io/c/megabonk/p/BepInEx/BepInExPack_IL2CPP/"]
 tags: ["characters", "weapons", "melee", "il2cpp", "bepinex6", "harmony", "vfx", "particles", "shaders", "balancing", "hats"]
 ---
 
@@ -31,7 +31,6 @@ tags: ["characters", "weapons", "melee", "il2cpp", "bepinex6", "harmony", "vfx",
   This plugin doesn't touch that setting. Other Megabonk mods (Megamod, for one) lock it off while they're loaded,
   and a released version of this one should too.
 
-
 ## Route and why
 We chose the **loader-api** route using BepInEx 6 IL2CPP with Harmony detours. Megabonk runs on Unity 2023.2 IL2CPP. BepInEx generates interop assemblies (`BepInEx/interop/Assembly-CSharp.dll`, `UnityEngine.*.dll`) containing typed invoke stubs. Data-only modding is impossible because characters and weapons are ScriptableObject instances loaded into internal dictionaries. Native DLL injection with MinHook is unnecessarily complex given that BepInEx IL2CPP provides full C# access to all engine types and Harmony method patching.
 
@@ -44,7 +43,7 @@ We chose the **loader-api** route using BepInEx 6 IL2CPP with Harmony detours. M
 - **Localization:** `UnlockableBase.GetName()` and `GetDescription()` attempt to read from Unity string tables. Without custom table entries, it throws a NullReferenceException, which can be bypassed via Harmony prefixes.
 - **Hat Attachment & `HatOrientation`:** Hats are managed via `PlayerRenderer.SetHat(HatData)`. Each `HatData` contains a `List<HatOrientation>` specifying local `pos`, `rot`, and `scale` indexed by `ECharacter`. For modded character IDs, this lookup returns null and places hats at root `(0, 0, 0)`, causing them to clip into character torsos or visors. Custom characters need explicit `hatTransform.localPosition` offsets (e.g. `y ≈ 0.62f` for Amog's rounded mesh).
 - **Melee Slash VFX Architecture:** Melee weapon attacks in Megabonk (like Dexecutioner) do not use 3D blade meshes or `TrailRenderer` components. The attack is driven by `WeaponAttack.prefabProjectile`, where the visual slash arc is an Archanor Retro Arsenal `ParticleSystem` (`Atlas03Glow` material with `BasicGlow` shader). Modifying the slash visual requires manipulating `ParticleSystem.main.startColor`, recoloring `Renderer` materials via `_TintColor` / `_Color`, and parenting custom 3D mesh hierarchies directly to the projectile root.
-- **Cel-Shaded Character Skins:** Character models like Amog utilize cel-shaders (`_MK_LIGHT_CEL`) that read textures from the `_AlbedoMap` shader property rather than standard Unity `_MainTex` or `mainTexture`. Procedural skins must assign to `_AlbedoMap` directly.
+- **Cel-Shaded Character Skins:** Character models like Amog utilize cel-shaders (`_MK_LIGHT_CEL`) that read textures from the `_AlbedoMap` shader property rather than standard Unity `_MainTex` or `mainTexture`. The keyword and property names are those of MK Toon, an Asset Store toon shader, whose tint is `_AlbedoColor`. Procedural skins must assign to `_AlbedoMap` directly.
 - **Exponential Scaling in Horde Combat:** With cleaving melee weapons (`canMultiHit = true`), uncapped per-execution stat stacking (e.g. +0.25% impale chance, +0.35 armor per kill) creates runaway snowball curves when fighting dense enemy packs. Balancing requires hard caps (e.g. 20% max proc chance) and fractional increments (+0.05% per execution).
 
 ## Build steps
@@ -73,7 +72,7 @@ We chose the **loader-api** route using BepInEx 6 IL2CPP with Harmony detours. M
 7. **Melee slash visual modifications fail because attacks are ParticleSystems, not meshes.** Modifying `MeshRenderer` or `TrailRenderer` on an instantiated `attack` prefab has no effect on Dexecutioner because it contains 0 meshes and 0 trails. The slash arc is an Archanor Retro Arsenal `ParticleSystem` with material `Atlas03Glow`. Fix: access `wa.prefabProjectile`, set `ParticleSystem.main.startColor = harvestGold`, clone `Renderer` materials with updated `_TintColor` / `_Color`, and construct a 3D primitive hierarchy (`Cylinder` shaft + `Cube` crossbar + 3 tines) parented to the projectile.
 8. **Toon/Cel shaders ignore Texture2D on mainTexture without `_AlbedoMap`.** Setting `Material.mainTexture` or `_MainTex` leaves Amog with default textures because `_MK_LIGHT_CEL` uses the `_AlbedoMap` shader property. Fix: explicitly call `material.SetTexture("_AlbedoMap", texture)` and `material.SetTexture("_MainTex", texture)`.
 9. **Cleave multi-hit weapons cause runaway exponential scaling on execution mechanics.** Cleaving melee attacks (`canMultiHit = true`) trigger hit hooks for every mob in an arc. With large swarms, uncapped stacking per execution causes exponential feedback. Fix: introduce hard caps (`Mathf.Min(CurrentChance + Step, MaxChance)`) and scale increments in small fractions (e.g. `+0.05%` per execution up to `20.0%` cap, `+0.10` armor per stack).
-10. **Cloned weapon prefabs retain native execution subroutines.** Weapons cloned from Dexecutioner inherit `ProjectileDexecutioner`, which can trigger its own built-in execute effect on low-health targets independently of custom mod mechanics.
+10. **Cloned weapon prefabs retain native execution subroutines.** Weapons cloned from Dexecutioner inherit `ProjectileDexecutioner`, which can trigger its own built-in execute effect on low-health targets independently of custom mod mechanics. Fix: none found yet; see Open questions. Count it in balancing until it's decoupled.
 
 ## Assets
 - `farmer_icon.png`: 256x256 pixel-art character portrait with straw hat, wheat stalk, and denim overalls.
